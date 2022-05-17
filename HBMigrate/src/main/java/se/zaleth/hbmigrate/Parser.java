@@ -162,6 +162,172 @@ class Parser {
             c.setType(type);
     }
     
+    public void modifyFile(File targetDir, String packageName) {
+        modifyFromTableMapping(mainMap, targetDir, packageName);
+    }
+    
+    private void modifyFromTableMapping(TableMapping map, File targetDir, String packageName) {
+        if(map == null)
+            return;
+        
+        String className = map.getClassName();
+        className = className.substring(className.lastIndexOf(".") + 1);
+        //System.out.println(targetDir + "/" + className + ".java");
+        StringBuilder tmp = new StringBuilder();
+        
+        try {
+            File target = new File(targetDir, className + ".java");
+            if(! target.exists()) {
+                wrapFromTableMapping(map, targetDir, packageName);
+            }
+            System.out.println("Modifying " + target.getAbsolutePath());
+            RandomAccessFile out = new RandomAccessFile(target, "rw");
+            
+            if(! seekForString(out, "import javax.persistence", false)) {
+                // need to add import, but where?
+                seekForString(out, "import", true);
+                seekBackForByte(out, (byte) '\n');
+                insertString(out, "import javax.persistence.*;\n");
+            }
+            
+            if(seekForString(out, "public class " + className, true)) {
+                tmp.delete(0, tmp.length());
+                tmp.append("@Entity\n@Table(name=\"");
+                tmp.append(map.getTableName());
+                tmp.append("\")\n");
+                insertString(out, tmp.toString());
+            } else {
+                System.out.println("WARNING: No class found for '" + className + "'");
+                tmp.delete(0, tmp.length());
+                tmp.append("@Entity\n@Table(name=\"");
+                tmp.append(map.getTableName());
+                tmp.append("\")\npublic class ");
+                tmp.append(map.getClassName());
+                tmp.append(" {\n\n}");
+                insertString(out, tmp.toString());                
+            }
+            
+            if(map.getId() == null || !seekForString(out, map.getId().getJavaName(), true)) {
+                System.out.println("WARNING: no ID found for '" + className + "'");
+                insertString(out, "\t@Id @GeneratedValue int id;\n");
+            } else {
+                if(seekBackForByte(out, (byte) '\n'))
+                    insertString(out, "\t@Id @GeneratedValue\n");
+            }
+            
+            for(Column c : map.getColumns()) {
+                seekForString(out, c.getJavaName(), true);
+                if(seekBackForByte(out, (byte) '\n'))
+                    insertString(out, "\t@Column(name = \"" + c.getTableName() + "\")\n");
+                else {
+                    System.out.println("WARNING: did not find declaration for '" + c.getJavaName() + "'");
+                    // we want to add thje declaration, but where to do it?
+                }
+            }
+            for(ManyToOne m : map.getManyToOnes()) {
+                seekForString(out, m.getJavaName(), true);
+                if(seekBackForByte(out, (byte) '\n'))
+                    insertString(out, "\t@ManyToOne\n");
+                else {
+                    System.out.println("WARNING: did not find declaration for '" + m.getJavaName() + "'");
+                    // we want to add thje declaration, but where to do it?
+                }
+            }
+            
+            out.close();
+            
+            for(TableMapping tm : map.getSubClasses())
+                modifyFromTableMapping(tm, targetDir, packageName);
+            
+            System.out.println("Done");
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+    
+    }
+    
+    /* Injects new string into the file, shuffling the rest of the file to make room
+    
+    */
+    private void insertString(RandomAccessFile file, String str) throws IOException {
+        int size = (int) (file.length() - file.getFilePointer());
+        byte[] buffer = new byte[size];
+        file.readFully(buffer);
+        file.writeBytes(str);
+        file.write(buffer);
+    }
+    
+    /* Will position the write head at the start of str and return true.
+     * If str is not found, returns false and sets file position to 0.
+     * Ignores text inside comments.
+    */
+    private boolean seekForString(RandomAccessFile file, String str, boolean beforeString) throws IOException {
+        boolean inOneLineComment = false, inBlockComment = false, seenSlash = false, seenStar = false;
+        file.seek(0);
+        byte[] chrs = str.getBytes();
+        int index = 0;
+        
+        while(index < chrs.length && file.getFilePointer() < file.length()) {
+            byte val = file.readByte();
+            switch(val) {
+                case '/':
+                    if(inBlockComment) {
+                        if(seenStar)
+                            seenStar = inBlockComment = false;
+                    } else if(!inOneLineComment) {
+                        if(seenSlash) {
+                            seenSlash = false;
+                            inOneLineComment = true;
+                        } else
+                            seenSlash = true;
+                    }
+                    break;
+                case '*':
+                    if(!inBlockComment) {
+                        if(seenSlash)
+                            inBlockComment = true;
+                    } else {
+                        seenStar = true;
+                    }
+                    break;
+                case '\n':
+                    if(inOneLineComment)
+                        inOneLineComment = false;
+                    break;
+                default:
+                    seenSlash = seenStar = false;
+                    if(!(inBlockComment || inOneLineComment))
+                        if(chrs[index] == val)
+                            index++;
+                        else
+                            index = 0;
+                    break;
+            }
+            
+            
+        }
+        if(index == chrs.length) {
+            if(beforeString)
+                file.seek(file.getFilePointer()-index); // return to start of string
+            return true;
+        }
+        file.seek(0);
+        return false;
+    }
+    
+    /* Seeks backwards for a single character. Does not skip comments.
+     * Will rewind back to the start of the file if the character is not found.
+    */
+    private boolean seekBackForByte(RandomAccessFile file, byte seek) throws IOException {
+        while(file.getFilePointer() > 0) {
+            byte val = file.readByte();
+            file.seek(file.getFilePointer() - 2); // skip back to char before the one we just read
+            if(val == seek)
+                return true;
+        }
+        return false;
+    }
+    
     public void generateWrapper(File targetDir, String packageName) {
         wrapFromTableMapping(mainMap, targetDir, packageName);
     }

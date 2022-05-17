@@ -130,10 +130,11 @@ public class HBMigrate implements ActionListener {
           }
       } else if(cmd.equals("Wrapper")) {
           if(destDir != null)
-              parser.generateWrapper(new File(dirName.getText()), pack.getText());              
-          
+              parser.generateWrapper(new File(dirName.getText()), pack.getText());
       } else if(cmd.equals("Modify")) {
-          
+          System.out.println("ERROR: This function does not work yet");
+          /*if(destDir != null)
+              parser.modifyFile(new File(dirName.getText()), pack.getText());*/
       }
 
   }
