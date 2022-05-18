@@ -35,7 +35,7 @@ class Parser {
     
     public void loadFile(File f) throws IOException, SAXException {
         doc = builder.parse(f);
-        System.out.println(Node.ELEMENT_NODE + " " + Node.ATTRIBUTE_NODE + " " + Node.TEXT_NODE);
+        HBMigrate.log(Node.ELEMENT_NODE + " " + Node.ATTRIBUTE_NODE + " " + Node.TEXT_NODE);
     }
     
     public void traverse() {
@@ -49,13 +49,13 @@ class Parser {
     
     public void traverse(Node node, int depth) {
         printSpace(depth * 2);
-        System.out.println(node.getNodeName() + "(" + node.getNodeType() + ")");
+        HBMigrate.log(node.getNodeName() + "(" + node.getNodeType() + ")");
         NamedNodeMap aMap = node.getAttributes();
         if(aMap != null) {
             for(int i = 0; i < aMap.getLength(); i++) {
                 Node  attr = aMap.item(i);
                 printSpace(depth * 2);
-                System.out.println(node.getNodeName() + "=" + node.getNodeValue());
+                HBMigrate.log(node.getNodeName() + "=" + node.getNodeValue());
             }
         }
         NodeList children = node.getChildNodes();
@@ -75,11 +75,11 @@ class Parser {
     
     private TableMapping parseClassElement(Element classElement) {
         TableMapping map = new TableMapping();
-        System.out.println(classElement.getAttribute("name"));
+        HBMigrate.log(classElement.getAttribute("name"));
         map.setClassName(classElement.getAttribute("name"));
-        System.out.println(classElement.getAttribute("table"));
+        HBMigrate.log(classElement.getAttribute("table"));
         map.setTableName(classElement.getAttribute("table"));
-        //System.out.println(node.getNodeName() + "(" + node.getNodeType() + ")=" + node.getNodeValue());
+        //HBMigrate.log(node.getNodeName() + "(" + node.getNodeType() + ")=" + node.getNodeValue());
         // there better only be one <id> element ...
         Element idElement = (Element) classElement.getElementsByTagName("id").item(0);
         if(idElement != null) {
@@ -103,7 +103,7 @@ class Parser {
                     String type = child.getAttribute("sql-type");
                     parseType(c, type);
                 } else {
-                    System.out.println("WARNING: column '" + c.getJavaName() + "' has no matching DB column");
+                    HBMigrate.log("WARNING: column '" + c.getJavaName() + "' has no matching DB column");
                     // silently drop this column
                     continue;
                 }
@@ -183,6 +183,9 @@ class Parser {
             // source file, will also be the final target
             File source = new File(targetDir, className + ".java");
             
+            if(! source.exists()) {
+                wrapFromTableMapping(map, targetDir, packageName);
+            }
             PrintWriter out = new PrintWriter(new FileOutputStream(target));
             BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(source)));
             
@@ -198,10 +201,15 @@ class Parser {
             out.println("@Table(name = \"" + map.getTableName() + "\")");
             out.println(line);
             
-            Vector<Column> cols = map.getColumns();
-            Vector<ManyToOne> mtos = map.getManyToOnes();
+            Vector<Column> cols = (Vector<Column>) map.getColumns().clone();
+            Vector<ManyToOne> mtos = (Vector<ManyToOne>) map.getManyToOnes().clone();
             if(map.getId() != null)
                 cols.add(map.getId());
+            else {
+                // mock up an id field
+                HBMigrate.log("WARNING: no ID found for '" + className + "'");
+                out.println("\t@Id @GeneratedValue int id;");
+            }
             
             // now to scan the body of the class ...
             while((line = in.readLine()) != null) {
@@ -222,22 +230,22 @@ class Parser {
                     Column c = getColumnByJName(cols, name);
                     if(c != null) {
                         if(c instanceof IdColumn) {
-                            //System.out.println(name + " is an id column variable");
+                            //HBMigrate.log(name + " is an id column variable");
                             out.println("\t@Id @GeneratedValue");
                             out.println("\t@Column(name = \"" + c.getTableName() + "\")");
                         } else {
-                            //System.out.println(name + " is a column variable");
+                            //HBMigrate.log(name + " is a column variable");
                             out.println("\t@Column(name = \"" + c.getTableName() + "\")");
                         }
                         cols.remove(c);
                     } else {
                         ManyToOne m = getMTOByJName(mtos, name);
                         if(m != null) {
-                            //System.out.println(name + " is a many-to-one variable");
+                            //HBMigrate.log(name + " is a many-to-one variable");
                             out.println("\t@ManyToOne");
                             mtos.remove(m);
                         } else {
-                            //System.out.println("No variable found in '" + line + "' ('" + name + "')");
+                            //HBMigrate.log("No variable found in '" + line + "' ('" + name + "')");
                         }
                     }
                 }
@@ -250,12 +258,12 @@ class Parser {
             out.flush();
             out.close();
             if(!source.delete()) {
-                System.out.println("Error deleting " + source.getName());
+                HBMigrate.log("Error deleting " + source.getName());
             }
             if(!target.renameTo(source)) {
-                System.out.println("Error renaming file to " + source.getName());
+                HBMigrate.log("Error renaming file to " + source.getName());
             }
-            System.out.println("Done with " + source.getName());
+            HBMigrate.log("Done with " + source.getName());
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -295,7 +303,7 @@ class Parser {
         
         String className = map.getClassName();
         className = className.substring(className.lastIndexOf(".") + 1);
-        //System.out.println(targetDir + "/" + className + ".java");
+        //HBMigrate.log(targetDir + "/" + className + ".java");
         StringBuilder tmp = new StringBuilder();
         
         try {
@@ -303,7 +311,7 @@ class Parser {
             if(! target.exists()) {
                 wrapFromTableMapping(map, targetDir, packageName);
             }
-            System.out.println("Modifying " + target.getAbsolutePath());
+            HBMigrate.log("Modifying " + target.getAbsolutePath());
             RandomAccessFile out = new RandomAccessFile(target, "rw");
             
             if(! seekForString(out, "import javax.persistence", false)) {
@@ -320,7 +328,7 @@ class Parser {
                 tmp.append("\")\n");
                 insertString(out, tmp.toString());
             } else {
-                System.out.println("WARNING: No class found for '" + className + "'");
+                HBMigrate.log("WARNING: No class found for '" + className + "'");
                 tmp.delete(0, tmp.length());
                 tmp.append("@Entity\n@Table(name=\"");
                 tmp.append(map.getTableName());
@@ -331,7 +339,7 @@ class Parser {
             }
             
             if(map.getId() == null || !seekForString(out, map.getId().getJavaName(), true)) {
-                System.out.println("WARNING: no ID found for '" + className + "'");
+                HBMigrate.log("WARNING: no ID found for '" + className + "'");
                 insertString(out, "\t@Id @GeneratedValue int id;\n");
             } else {
                 if(seekBackForByte(out, (byte) '\n'))
@@ -343,7 +351,7 @@ class Parser {
                 if(seekBackForByte(out, (byte) '\n'))
                     insertString(out, "\t@Column(name = \"" + c.getTableName() + "\")\n");
                 else {
-                    System.out.println("WARNING: did not find declaration for '" + c.getJavaName() + "'");
+                    HBMigrate.log("WARNING: did not find declaration for '" + c.getJavaName() + "'");
                     // we want to add thje declaration, but where to do it?
                 }
             }
@@ -352,7 +360,7 @@ class Parser {
                 if(seekBackForByte(out, (byte) '\n'))
                     insertString(out, "\t@ManyToOne\n");
                 else {
-                    System.out.println("WARNING: did not find declaration for '" + m.getJavaName() + "'");
+                    HBMigrate.log("WARNING: did not find declaration for '" + m.getJavaName() + "'");
                     // we want to add thje declaration, but where to do it?
                 }
             }
@@ -362,7 +370,7 @@ class Parser {
             for(TableMapping tm : map.getSubClasses())
                 modifyFromTableMapping(tm, targetDir, packageName);
             
-            System.out.println("Done");
+            HBMigrate.log("Done");
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -461,11 +469,11 @@ class Parser {
         
         String className = map.getClassName();
         className = "Managed" + className.substring(className.lastIndexOf(".") + 1);
-        //System.out.println(targetDir + "/" + className + ".java");
+        //HBMigrate.log(targetDir + "/" + className + ".java");
         
         try {
             File target = new File(targetDir, className + ".java");
-            System.out.println("Generating " + target.getAbsolutePath());
+            HBMigrate.log("Generating " + target.getAbsolutePath());
             PrintWriter out = new PrintWriter(new FileOutputStream(target));
             
             out.println();
@@ -481,7 +489,7 @@ class Parser {
             out.println("public class " + className + " extends " + map.getClassName().substring(map.getClassName().lastIndexOf(".") + 1) + " {");
             out.println();
             if(map.getId() == null) {
-                System.out.println("WARNING: no ID found for '" + className + "'");
+                HBMigrate.log("WARNING: no ID found for '" + className + "'");
                 out.println("\t@Id @GeneratedValue int id;");
             } else {
                 out.println("\t@Id @GeneratedValue");
@@ -499,7 +507,7 @@ class Parser {
             for(TableMapping tm : map.getSubClasses())
                 wrapFromTableMapping(tm, targetDir, packageName);
             
-            System.out.println("Done");
+            HBMigrate.log("Done");
 
         } catch(IOException e) {
             e.printStackTrace();
