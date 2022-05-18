@@ -7,6 +7,7 @@ package se.zaleth.hbmigrate;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Vector;
 import javax.xml.parsers.*;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -163,9 +164,131 @@ class Parser {
     }
     
     public void modifyFile(File targetDir, String packageName) {
-        modifyFromTableMapping(mainMap, targetDir, packageName);
+        renameFromTableMapping(mainMap, targetDir, packageName);
+        //modifyFromTableMapping(mainMap, targetDir, packageName);
     }
     
+    /* Create a temp file, copy lines from src file and inject additions as needed */
+    private void renameFromTableMapping(TableMapping map, File targetDir, String packageName) {
+        if(map == null)
+            return;
+        
+        try {
+            String className = map.getClassName();
+            className = className.substring(className.lastIndexOf(".") + 1);
+            
+            // we create the temp file in target dir in the hope the rename at the end will be faster
+            File target = File.createTempFile("HBM", ".tmp", targetDir);
+            
+            // source file, will also be the final target
+            File source = new File(targetDir, className + ".java");
+            
+            PrintWriter out = new PrintWriter(new FileOutputStream(target));
+            BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(source)));
+            
+            String line;
+            while(!(line = in.readLine()).contains("class")) {
+                out.println(line);
+            }
+            
+            // first injection, import line and class annotations
+            out.println("import javax.persistence.*;");
+            out.println();
+            out.println("@Entity");
+            out.println("@Table(name = \"" + map.getTableName() + "\")");
+            out.println(line);
+            
+            Vector<Column> cols = map.getColumns();
+            Vector<ManyToOne> mtos = map.getManyToOnes();
+            if(map.getId() != null)
+                cols.add(map.getId());
+            
+            // now to scan the body of the class ...
+            while((line = in.readLine()) != null) {
+                // hoo boy, how to tell which lines are variable declarations?
+                // a declaration line ends in ';'
+                if(line.endsWith(";")) {
+                    String name;
+                    // it might have an assignment; if so, we want the part before '='
+                    if(line.indexOf("=") > -1)
+                        // this is a very nice bit of syntax sugar: index the returned array right away
+                        name = line.split("=")[0];
+                    else
+                        // make sure name has a value
+                        name = line.substring(0, line.length() - 1);
+                    // now, the last word of our line should be the name of the variable
+                    String[] ss = name.split(" ");
+                    name = ss[ss.length - 1];
+                    Column c = getColumnByJName(cols, name);
+                    if(c != null) {
+                        if(c instanceof IdColumn) {
+                            //System.out.println(name + " is an id column variable");
+                            out.println("\t@Id @GeneratedValue");
+                            out.println("\t@Column(name = \"" + c.getTableName() + "\")");
+                        } else {
+                            //System.out.println(name + " is a column variable");
+                            out.println("\t@Column(name = \"" + c.getTableName() + "\")");
+                        }
+                        cols.remove(c);
+                    } else {
+                        ManyToOne m = getMTOByJName(mtos, name);
+                        if(m != null) {
+                            //System.out.println(name + " is a many-to-one variable");
+                            out.println("\t@ManyToOne");
+                            mtos.remove(m);
+                        } else {
+                            //System.out.println("No variable found in '" + line + "' ('" + name + "')");
+                        }
+                    }
+                }
+                // no matter what, now output the original line
+                out.println(line);
+            }
+            
+            // clean up
+            in.close();
+            out.flush();
+            out.close();
+            if(!source.delete()) {
+                System.out.println("Error deleting " + source.getName());
+            }
+            if(!target.renameTo(source)) {
+                System.out.println("Error renaming file to " + source.getName());
+            }
+            System.out.println("Done with " + source.getName());
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        
+        //recurse over subclasses
+        Vector<TableMapping> maps = map.getSubClasses();
+        for(TableMapping tm : maps)
+            renameFromTableMapping(tm, targetDir, packageName);
+    }
+    
+    /**
+     * Finds a column based on its java (variable) name.
+     * @return Column or null
+     */
+    private Column getColumnByJName(Vector<Column> cols, String name) {
+        for(Column c : cols)
+            if(c.getJavaName().equals(name))
+                return c;
+        return null;
+    }
+    
+    /**
+     * Finds a many-to-one based on its java (variable) name.
+     * @return ManyToOne or null
+     */
+    private ManyToOne getMTOByJName(Vector<ManyToOne> mtos, String name) {
+        for(ManyToOne m : mtos)
+            if(m.getJavaName().equals(name))
+                return m;
+        return null;
+    }
+    
+    /* this method, in-place modification, seems not to work as I wish */
     private void modifyFromTableMapping(TableMapping map, File targetDir, String packageName) {
         if(map == null)
             return;

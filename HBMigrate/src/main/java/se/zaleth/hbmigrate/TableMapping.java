@@ -84,4 +84,43 @@ public class TableMapping {
         return subClasses;
     }
 
+    /**
+     * Finds a column based on its java (variable) name.
+     * @return Column or null
+     */
+    public Column getColumnByJName(String name) {
+        // hardcode to add IdColumn to this list
+        if(id.getJavaName().equals(name))
+            return id;
+        for(Column c : columns)
+            if(c.getJavaName().equals(name))
+                return c;
+        return null;
+    }
+    
+    /**
+     * Finds a column based on its table (database) name.
+     * @return Column or null
+     */
+    public Column getColumnByTName(String name) {
+        // hardcode to add IdColumn to this list
+        if(id.getTableName().equals(name))
+            return id;
+        for(Column c : columns)
+            if(c.getTableName().equals(name))
+                return c;
+        return null;        
+    }
+    
+    /**
+     * Finds a many-to-one based on its java (variable) name.
+     * @return ManyToOne or null
+     */
+    public ManyToOne getMTOByJName(String name) {
+        for(ManyToOne m : manyToOnes)
+            if(m.getJavaName().equals(name))
+                return m;
+        return null;
+    }
+    
 }
