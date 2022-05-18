@@ -16,16 +16,27 @@ import org.xml.sax.SAXException;
 
 public class HBMigrate implements ActionListener {
 
+    private static HBMigrate running = null;
+    
   public static void main(String[] args) {
-    new HBMigrate();
+    running = new HBMigrate();
   }
 
+  public static void log(String msg) {
+      System.out.println(msg);
+      if(running != null) {
+          running.textOut.append(msg);
+          running.textOut.append("\n");
+      }
+  }
+  
   private JFrame root;
   private JFileChooser loadDialog, saveDialog;
   private JLabel fileName, dirName, className;
-  private JScrollPane scrollArea;
+  private JScrollPane scrollArea, logArea;
   private JPanel columns;
   private JTextField pack;
+  private JTextArea textOut;
   
   private File srcDir, destDir;
   private Parser parser;
@@ -88,6 +99,11 @@ public class HBMigrate implements ActionListener {
     columns = new JPanel(new GridLayout(0, 1));
     scrollArea = new JScrollPane(columns);
     root.add(scrollArea, BorderLayout.CENTER);
+    
+    textOut = new JTextArea();
+    textOut.setEditable(false);
+    logArea = new JScrollPane(textOut);
+    root.add(logArea, BorderLayout.SOUTH);
     
     root.setVisible(true);
   }
