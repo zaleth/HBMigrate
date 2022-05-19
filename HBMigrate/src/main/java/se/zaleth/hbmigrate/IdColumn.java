@@ -5,14 +5,22 @@
  */
 package se.zaleth.hbmigrate;
 
+import org.w3c.dom.Element;
+
 /**
  *
  * @author krister
  */
 public class IdColumn extends Column {
     
-    public IdColumn() {
-        super();
+    public IdColumn(Element e) {
+        super(e);
+        mapType = Mapping.ID_MAPPING;
+    }
+    
+    @Override
+    public String getAnnotations() {
+        return "@Id @GeneratedValue\n" + super.getAnnotations();
     }
     
 }

@@ -7,7 +7,6 @@ package se.zaleth.hbmigrate;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Vector;
 import javax.xml.parsers.*;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
@@ -35,7 +34,7 @@ class Parser {
     
     public void loadFile(File f) throws IOException, SAXException {
         doc = builder.parse(f);
-        HBMigrate.log(Node.ELEMENT_NODE + " " + Node.ATTRIBUTE_NODE + " " + Node.TEXT_NODE);
+        //HBMigrate.log(Node.ELEMENT_NODE + " " + Node.ATTRIBUTE_NODE + " " + Node.TEXT_NODE);
     }
     
     public void traverse() {
@@ -69,7 +68,8 @@ class Parser {
         Element docRoot = doc.getDocumentElement();
         // only process first <class> element
         Element classElement = (Element) docRoot.getElementsByTagName("class").item(0);
-        mainMap = parseClassElement(classElement);
+        //mainMap = parseClassElement(classElement);
+        mainMap = new TableMapping(classElement);
         return mainMap;
     }
     
@@ -83,17 +83,19 @@ class Parser {
         // there better only be one <id> element ...
         Element idElement = (Element) classElement.getElementsByTagName("id").item(0);
         if(idElement != null) {
-            IdColumn id = new IdColumn();
-            id.setTableName(idElement.getAttribute("column"));
+            IdColumn id = new IdColumn(idElement);
+            /*id.setTableName(idElement.getAttribute("column"));
             id.setJavaName(idElement.getAttribute("name"));
-            id.setType("int");
+            id.setType("int");*/
             map.setId(id);
+        } else {
+            HBMigrate.log("WARNING: no 'id' found for '" + map.getClassName());
         }
         
         // find direct fields
         ArrayList<Element> nodes = getElementsByTagName(classElement, "property");
         for(Element col : nodes) {
-            Column c = new Column();
+            Column c = new Column(col);
             c.setJavaName(col.getAttribute("name"));
             if(col.getAttribute("column").isEmpty()) {
                 // look for a child node
@@ -118,9 +120,7 @@ class Parser {
         // find foreign relationships
         nodes = getElementsByTagName(classElement, "many-to-one");
         for(Element el : nodes) {
-            ManyToOne mto = new ManyToOne();
-            mto.setClassName(el.getAttribute("class"));
-            mto.setJavaName(el.getAttribute("name"));
+            ManyToOne mto = new ManyToOne(el);
             map.addManyToOne(mto);
         }
         
@@ -134,9 +134,15 @@ class Parser {
         return map;
     }
     
+    /** 
+     * Returns all immediate children matching the given tag.
+     * @param parent Parent element
+     * @param tag Element tag to look for
+     * @return A list of all immediate children matching the given tag
+     */
     private ArrayList<Element> getElementsByTagName(Element parent, String tag) {
         NodeList nodes = parent.getElementsByTagName(tag);
-        ArrayList<Element> ret = new ArrayList<Element>();
+        ArrayList<Element> ret = new ArrayList<>();
         
         for(int i = 0; i < nodes.getLength(); i++) {
             Element e = (Element) nodes.item(i);
@@ -148,19 +154,19 @@ class Parser {
     
     private void parseType(Column c, String type) {
         if(type.isEmpty())
-            c.setType("int");
+            c.setJavaType("int");
         else if(type.startsWith("nvarchar"))
-            c.setType("String");
+            c.setJavaType("String");
         else if(type.startsWith("date"))
-            c.setType("java.sql.Date");
+            c.setJavaType("java.sql.Date");
         else if(type.startsWith("timestamp"))
-            c.setType("java.sql.Timestamp");
+            c.setJavaType("java.sql.Timestamp");
         else if(type.startsWith("datetime"))
-            c.setType("java.sql.Time");
+            c.setJavaType("java.sql.Time");
         else if(type.startsWith("blob"))
-            c.setType("java.sql.Blob");
-        else
-            c.setType(type);
+            c.setJavaType("java.sql.Blob");
+        else // default case, assume it is a class name
+            c.setJavaType(type);
     }
     
     public void modifyFile(File targetDir, String packageName) {
@@ -201,8 +207,8 @@ class Parser {
             out.println("@Table(name = \"" + map.getTableName() + "\")");
             out.println(line);
             
-            Vector<Column> cols = (Vector<Column>) map.getColumns().clone();
-            Vector<ManyToOne> mtos = (Vector<ManyToOne>) map.getManyToOnes().clone();
+            ArrayList<Column> cols = (ArrayList<Column>) map.getColumns().clone();
+            ArrayList<ManyToOne> mtos = (ArrayList<ManyToOne>) map.getManyToOnes().clone();
             if(map.getId() != null)
                 cols.add(map.getId());
             else {
@@ -269,7 +275,7 @@ class Parser {
         }
         
         //recurse over subclasses
-        Vector<TableMapping> maps = map.getSubClasses();
+        ArrayList<TableMapping> maps = map.getSubClasses();
         for(TableMapping tm : maps)
             renameFromTableMapping(tm, targetDir, packageName);
     }
@@ -278,7 +284,7 @@ class Parser {
      * Finds a column based on its java (variable) name.
      * @return Column or null
      */
-    private Column getColumnByJName(Vector<Column> cols, String name) {
+    private Column getColumnByJName(ArrayList<Column> cols, String name) {
         for(Column c : cols)
             if(c.getJavaName().equals(name))
                 return c;
@@ -289,7 +295,7 @@ class Parser {
      * Finds a many-to-one based on its java (variable) name.
      * @return ManyToOne or null
      */
-    private ManyToOne getMTOByJName(Vector<ManyToOne> mtos, String name) {
+    private ManyToOne getMTOByJName(ArrayList<ManyToOne> mtos, String name) {
         for(ManyToOne m : mtos)
             if(m.getJavaName().equals(name))
                 return m;

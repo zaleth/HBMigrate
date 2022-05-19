@@ -23,8 +23,14 @@ public class HBMigrate implements ActionListener {
   }
 
   public static void log(String msg) {
+      StackTraceElement e = Thread.currentThread().getStackTrace()[2];
+      String caller = "From " + e.getClassName() + 
+              "." + e.getMethodName() + " line " +
+              e.getLineNumber() + "(): ";
+      System.out.print(caller);
       System.out.println(msg);
       if(running != null) {
+          //running.textOut.append(caller);
           running.textOut.append(msg);
           running.textOut.append("\n");
       }
@@ -120,13 +126,13 @@ public class HBMigrate implements ActionListener {
                   fileName.setText(loadDialog.getSelectedFile().getName());
                   parser.loadFile(loadDialog.getSelectedFile());
                   TableMapping map = parser.parse();
-                  className.setText(map.getClassName());
+                  /*className.setText(map.getClassName());
                   columns.removeAll();
-                  columns.add(map.getId());
+                  columns.add(map.getId().getPanel());
                   for(Column c : map.getColumns()) {
-                      columns.add(c);
+                      columns.add(c.getPanel());
                   }
-                  scrollArea.repaint();
+                  scrollArea.repaint();*/
               } catch(IOException ex) {
                   // most likely transient error
                   ex.printStackTrace();

@@ -7,25 +7,37 @@ package se.zaleth.hbmigrate;
 
 import java.awt.event.*;
 import javax.swing.*;
+import org.w3c.dom.Element;
 
 /**
  *
  * @author krister
  */
-public class Column extends JPanel implements ActionListener {
+public class Column extends Mapping implements ActionListener {
     
     private JLabel tableName;
     private JLabel javaName;
-    private JTextField type;
+    private JTextField javaType;
+    private JPanel panel;
 
-    public Column() {
-        super();
-        tableName = new JLabel();
-        this.add(tableName);
-        javaName = new JLabel();
-        this.add(javaName);
-        type = new JTextField();
-        this.add(type);
+    public Column(Element e) {
+        super(e);
+        panel = new JPanel();
+        tableName = new JLabel(super.getTableName());
+        panel.add(tableName);
+        javaName = new JLabel(super.getJavaName());
+        panel.add(javaName);
+        javaType = new JTextField();
+        panel.add(javaType);
+        mapType = Mapping.COLUMN_MAPPING;
+    }
+    
+    public String getAnnotations() {
+        return "@Column(name=\"" + tableName.getText() + "\")";
+    }
+    
+    public JPanel getPanel() {
+        return panel;
     }
     
     public String getTableName() {
@@ -44,12 +56,12 @@ public class Column extends JPanel implements ActionListener {
         this.javaName.setText(javaName);
     }
 
-    public String getType() {
-        return type.getText();
+    public String getJavaType() {
+        return javaType.getText();
     }
 
-    public void setType(String type) {
-        this.type.setText(type);
+    public void setJavaType(String type) {
+        this.javaType.setText(type);
     }
     
     public void actionPerformed(ActionEvent e) {
