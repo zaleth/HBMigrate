@@ -5,29 +5,35 @@
  */
 package se.zaleth.hbmigrate;
 
+import org.w3c.dom.Element;
+
 /**
  *
  * @author krister
  */
-public class ManyToOne {
+public class ManyToOne extends Mapping {
     
-    private String className;
-    private String javaName;
-
+    public ManyToOne(Element e) {
+        super(e);
+        mapType = Mapping.MANY_TO_ONE_MAPPING;
+    }
+    
     public String getClassName() {
-        return className;
+        return getAttribute("class");
     }
 
-    public void setClassName(String className) {
-        this.className = className;
+    /*public void setClassName(String className) {
+        setAttribute("class", className);
+    }*/
+
+    @Override
+    public String getAnnotations() {
+        return "@ManyToOne";
     }
 
-    public String getJavaName() {
-        return javaName;
-    }
-
-    public void setJavaName(String javaName) {
-        this.javaName = javaName;
+    @Override
+    public String getJavaType() {
+        return getClassName();
     }
     
 }

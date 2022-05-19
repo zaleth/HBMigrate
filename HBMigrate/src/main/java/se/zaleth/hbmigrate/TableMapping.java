@@ -5,7 +5,8 @@
  */
 package se.zaleth.hbmigrate;
 
-import java.util.Vector;
+import java.util.ArrayList;
+import org.w3c.dom.*;
 
 /**
  *
@@ -13,21 +14,182 @@ import java.util.Vector;
  */
 public class TableMapping {
     
+    private static ArrayList<TableMapping> tables = new ArrayList<>();
+    
+    public static TableMapping getByClassName(String pack, String name) {
+        for(TableMapping tm : tables)
+            if(tm.packName.equals(pack) && tm.className.equals(name))
+                return tm;
+        return null;
+    }
+    
+    public static TableMapping getByTableName(String name) {
+        for(TableMapping tm : tables)
+            if(tm.tableName.equals(name))
+                return tm;
+        return null;
+    }
+    
+    private TableMapping parent;
+    
+    private String packName;
     private String className;
     private String tableName;
     private String extendsName;
+    private boolean isAbstract;
 
     private IdColumn id;
-    private Vector<Column> columns;
-    private Vector<ManyToOne> manyToOnes;
-    private Vector<TableMapping> subClasses;
+    private ArrayList<Mapping> mappings;
+    private ArrayList<Column> columns;
+    private ArrayList<ManyToOne> manyToOnes;
+    private ArrayList<TableMapping> subClasses;
 
     public TableMapping() {
-        columns = new Vector<Column>();
-        manyToOnes = new Vector<ManyToOne>();
-        subClasses = new Vector<TableMapping>();
+        mappings = new ArrayList<>();
+        columns = new ArrayList<>();
+        manyToOnes = new ArrayList<>();
+        subClasses = new ArrayList<>();
+        parent = null;
+        tables.add(this);
     }
 
+    public TableMapping(Element classElement) {
+        this();
+        if(classElement.getTagName().contains("class")) {
+            parseDocument(classElement);
+        }
+    }
+    
+    public TableMapping(Element classElement, TableMapping parent) {
+        this();
+        this.parent = parent;
+        if(classElement.getTagName().contains("class")) {
+            parseDocument(classElement);
+        }
+    }
+    
+    private void parseDocument(Element docRoot) {
+        TableMapping next = null;
+        NamedNodeMap attrs = docRoot.getAttributes();
+        Node sibling = docRoot.getNextSibling();
+        //Mapping m = Mapping.parseElement((Element) child);
+        
+        if(attrs != null) {
+            for(int i = 0; i < attrs.getLength(); i++) {
+                Node n = attrs.item(i);
+                if(n.getNodeType() == Node.ATTRIBUTE_NODE) {
+                    Attr a = (Attr) n;
+                    String name = a.getName();
+                    if(name.equals("name")) {
+                        String str = a.getValue();
+                        if(str.lastIndexOf(".") > -1) {
+                            packName = str.substring(0, str.lastIndexOf("."));
+                            className = str.substring(str.lastIndexOf(".") + 1);
+                        } else {
+                            HBMigrate.log("WARNING: class name does not include package");
+                            packName = "";
+                            className = str;
+                        }
+                    } else if(name.equals("table")) {
+                        tableName = a.getValue();
+                    } else if(name.equals("abstract")) {
+                        isAbstract = Boolean.parseBoolean(a.getValue());
+                    } else
+                        if(a.getSpecified())
+                            HBMigrate.log("WARNING: unhandled attribute '" + name + "' (value is " + a.getValue() + ") of node " + docRoot.getTagName());
+                } else {
+                    HBMigrate.log("WARNING: node '" + n.getNodeName() + "' has node type " + n.getNodeType() + " in " + docRoot.getTagName());
+                }
+            }
+            HBMigrate.log(" -- " + packName + "." + className + " -> " + tableName);
+        }
+        // first, process our children
+        NodeList children = docRoot.getChildNodes();
+        Mapping last = null;
+        for(int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if(! node.getParentNode().isSameNode(docRoot))
+                HBMigrate.log(" --- HAHAHA ---");
+            switch(node.getNodeType()) {
+                case Node.ELEMENT_NODE:
+                    if(((Element) node).getTagName().equals("joined-subclass")) {
+                        subClasses.add(new TableMapping((Element) node, this));
+                    } else {
+                        if(last != null)
+                            mappings.add(last);
+                        last = Mapping.parseElement((Element) node);
+                    }
+                    break;
+                    
+                case Node.ATTRIBUTE_NODE:
+                    if(last != null)
+                        last.parseAttribute(node);
+                    else
+                        HBMigrate.log("WARNING: orphan attribute detected");
+                    break;
+                    
+                case Node.COMMENT_NODE:
+                    //HBMigrate.log(((Comment) node).getData());
+                    break;
+
+                case Node.TEXT_NODE:
+                    //HBMigrate.log(((Text) node).getData());
+                    break;
+                    
+                default:
+                    HBMigrate.log("WARNING: node '" + node.getNodeName() + "' has node type " + node.getNodeType());
+                    break;
+            }
+        }
+        if(last != null)
+            mappings.add(last);
+        
+        // then, process our siblings
+        if(sibling != null && sibling.getNodeType() == Node.ELEMENT_NODE)
+            next = new TableMapping((Element) sibling);
+        
+    }
+    
+    private void parseElement(Node node) {
+        if(node == null)
+            return;
+        
+        if(node.getNodeType() != Node.ELEMENT_NODE) {
+            HBMigrate.log("WARNING: node '" + node.getNodeName() + "' has node type " + node.getNodeType());
+        } else {
+            Element e = (Element) node;
+            NamedNodeMap attrs = e.getAttributes();
+            if(attrs != null) {
+                for(int i = 0; i < attrs.getLength(); i++) {
+                    Node n = attrs.item(i);
+                    if(n.getNodeType() == Node.ATTRIBUTE_NODE) {
+                        Attr a = (Attr) n;
+                        String name = a.getName();
+                        if(name.equals("name")) {
+                            String str = a.getValue();
+                            if(str.lastIndexOf(".") > -1) {
+                                packName = str.substring(0, str.lastIndexOf("."));
+                                className = str.substring(str.lastIndexOf(".") + 1);
+                            } else {
+                                HBMigrate.log("WARNING: class name does not include package");
+                                packName = "";
+                                className = str;
+                            }
+                        } else if(name.equals("table")) {
+                            tableName = a.getValue();
+                        } else
+                            if(a.getSpecified())
+                                HBMigrate.log("WARNING: unhandled attribute '" + name + "' (value is " + a.getValue() + ") of node " + e.getTagName());
+                    } else {
+                        HBMigrate.log("WARNING: node '" + n.getNodeName() + "' has node type " + n.getNodeType() + " in " + e.getTagName());
+                    }
+                }
+            }
+            HBMigrate.log("Element " + e.getTagName() + " scanned");
+        }
+        parseElement(node.getNextSibling());
+    }
+    
     public String getClassName() {
         return className;
     }
@@ -64,7 +226,7 @@ public class TableMapping {
         columns.add(c);
     }
     
-    public Vector<Column> getColumns() {
+    public ArrayList<Column> getColumns() {
         return columns;
     }
 
@@ -72,7 +234,7 @@ public class TableMapping {
         manyToOnes.add(m);
     }
     
-    public Vector<ManyToOne> getManyToOnes() {
+    public ArrayList<ManyToOne> getManyToOnes() {
         return manyToOnes;
     }
 
@@ -80,7 +242,7 @@ public class TableMapping {
         subClasses.add(tm);
     }
     
-    public Vector<TableMapping> getSubClasses() {
+    public ArrayList<TableMapping> getSubClasses() {
         return subClasses;
     }
 
