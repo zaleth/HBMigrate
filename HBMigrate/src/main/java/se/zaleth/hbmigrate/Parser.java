@@ -5,6 +5,10 @@
  */
 package se.zaleth.hbmigrate;
 
+import se.zaleth.hbmigrate.mappings.Column;
+import se.zaleth.hbmigrate.mappings.ManyToOne;
+import se.zaleth.hbmigrate.mappings.TableMapping;
+import se.zaleth.hbmigrate.mappings.IdColumn;
 import java.io.*;
 import java.util.ArrayList;
 import javax.xml.parsers.*;
@@ -52,9 +56,9 @@ class Parser {
         NamedNodeMap aMap = node.getAttributes();
         if(aMap != null) {
             for(int i = 0; i < aMap.getLength(); i++) {
-                Node  attr = aMap.item(i);
+                Attr attr = (Attr) aMap.item(i);
                 printSpace(depth * 2);
-                HBMigrate.log(node.getNodeName() + "=" + node.getNodeValue());
+                HBMigrate.log(attr.getNodeName() + "=" + attr.getNodeValue());
             }
         }
         NodeList children = node.getChildNodes();

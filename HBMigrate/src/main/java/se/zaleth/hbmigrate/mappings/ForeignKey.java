@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package se.zaleth.hbmigrate;
+package se.zaleth.hbmigrate.mappings;
 
 import org.w3c.dom.Element;
 
@@ -15,10 +15,10 @@ public class ForeignKey extends Mapping {
 
     private TableMapping parent;
     
-    public ForeignKey(Element e) {
+    public ForeignKey(Element e, TableMapping parent) {
         super(e);
         mapType = Mapping.FOREIGN_KEY_MAPPING;
-        parent = TableMapping.getByTableName(((Element) e.getParentNode()).getAttribute("table"));
+        this.parent = parent;
     }
     
     @Override

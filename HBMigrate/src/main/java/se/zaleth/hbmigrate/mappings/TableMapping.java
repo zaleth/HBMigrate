@@ -3,10 +3,11 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package se.zaleth.hbmigrate;
+package se.zaleth.hbmigrate.mappings;
 
 import java.util.ArrayList;
 import org.w3c.dom.*;
+import se.zaleth.hbmigrate.HBMigrate;
 
 /**
  *
@@ -44,6 +45,10 @@ public class TableMapping {
     private ArrayList<ManyToOne> manyToOnes;
     private ArrayList<TableMapping> subClasses;
 
+    public String getPackName() {
+        return packName;
+    }
+    
     public TableMapping() {
         mappings = new ArrayList<>();
         columns = new ArrayList<>();
@@ -117,7 +122,7 @@ public class TableMapping {
                     } else {
                         if(last != null)
                             mappings.add(last);
-                        last = Mapping.parseElement((Element) node);
+                        last = Mapping.parseElement((Element) node, parent);
                     }
                     break;
                     

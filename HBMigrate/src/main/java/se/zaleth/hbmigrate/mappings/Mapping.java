@@ -3,10 +3,11 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package se.zaleth.hbmigrate;
+package se.zaleth.hbmigrate.mappings;
 
 import java.util.HashMap;
 import org.w3c.dom.*;
+import se.zaleth.hbmigrate.HBMigrate;
 
 /**
  *
@@ -74,7 +75,7 @@ public abstract class Mapping {
         }
     }
     
-    public static Mapping parseElement(Element e) {
+    public static Mapping parseElement(Element e, TableMapping parent) {
         if(e.getNodeType() == Node.ELEMENT_NODE) {
             String name = e.getTagName();
             if(name.equals("property"))
@@ -84,7 +85,7 @@ public abstract class Mapping {
             else if(name.equals("many-to-one"))
                 return new ManyToOne(e);
             else if(name.equals("key"))
-                return new ForeignKey(e);
+                return new ForeignKey(e, parent);
             HBMigrate.log("WARNING: unhandled element class '" + name + "'");        
         }
         
@@ -95,7 +96,7 @@ public abstract class Mapping {
     public static Mapping parseElement(Element e, Mapping m) {
         switch(e.getNodeType()) {
             case Node.ELEMENT_NODE:
-                return Mapping.parseElement(e);
+                return Mapping.parseElement(e, (TableMapping) null);
                 
             case Node.ATTRIBUTE_NODE:
                 m.setAttribute(e.getNodeName(), e.getNodeValue());

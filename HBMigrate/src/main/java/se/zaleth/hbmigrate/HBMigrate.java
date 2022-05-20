@@ -6,8 +6,10 @@
 package se.zaleth.hbmigrate;
 
 
+import se.zaleth.hbmigrate.mappings.TableMapping;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
 import java.io.*;
 import java.awt.event.*;
 import javax.swing.*;
@@ -46,17 +48,37 @@ public class HBMigrate implements ActionListener {
   
   private File srcDir, destDir;
   private Parser parser;
+  private Settings settings;
   
   public HBMigrate() {
+      settings = new Settings();
+      
     root = new JFrame("HBMigrate");
-    root.setLocation(100, 100);
-    root.setSize(800, 600);
+    root.setLocation(Integer.parseInt(settings.get("window.left", "100")),
+            Integer.parseInt(settings.get("window.top", "100")));
+    root.setSize(Integer.parseInt(settings.get("window.width", "800")),
+            Integer.parseInt(settings.get("window.height", "600")));
     root.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     root.setLayout(new BorderLayout());
+    root.addWindowListener(new WindowAdapter() {
+        @Override
+        public void windowClosing(WindowEvent e) {
+            settings.save();
+        }
+    });
+    root.addComponentListener(new ComponentAdapter() {
+        @Override
+        public void componentResized(ComponentEvent componentEvent) {
+            Rectangle r = root.getBounds();
+            settings.put("window.left", "" + r.x);
+            settings.put("window.top", "" + r.y);
+            settings.put("window.width", "" + r.width);
+            settings.put("window.height", "" + r.height);
+        }
+    });
     
-    srcDir = new File("");
-    destDir = new File("");
-
+    srcDir = new File(settings.get("sourceDir", ""));
+    destDir = new File(settings.get("destinationDir", ""));
     parser = new Parser();
     
     loadDialog = new JFileChooser();
@@ -123,9 +145,11 @@ public class HBMigrate implements ActionListener {
               try {
                   // save directory
                   srcDir = loadDialog.getCurrentDirectory();
+                  settings.put("sourceDir", srcDir.getAbsolutePath());
                   fileName.setText(loadDialog.getSelectedFile().getName());
                   parser.loadFile(loadDialog.getSelectedFile());
                   TableMapping map = parser.parse();
+                  pack.setText(map.getPackName());
                   /*className.setText(map.getClassName());
                   columns.removeAll();
                   columns.add(map.getId().getPanel());
@@ -148,6 +172,7 @@ public class HBMigrate implements ActionListener {
           saveDialog.setDialogTitle("Choose directory for generated file");
           if(saveDialog.showOpenDialog(root) == JFileChooser.APPROVE_OPTION) {
               destDir = saveDialog.getCurrentDirectory();
+              settings.put("destinationDir", destDir.getAbsolutePath());
               dirName.setText(saveDialog.getSelectedFile().getAbsolutePath());
           }
       } else if(cmd.equals("Wrapper")) {
