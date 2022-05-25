@@ -11,22 +11,24 @@ import org.w3c.dom.Element;
  *
  * @author krister
  */
-public class IdColumn extends Column {
+public class Set extends Mapping {
+
+    private TableMapping parent;
     
-    public IdColumn(Element e) {
+    Set(Element e, TableMapping parent) {
         super(e);
-        mapType = Mapping.ID_MAPPING;
+        this.mapType = Mapping.SET_MAPPING;
+        this.parent = parent;
     }
     
     @Override
     public String getAnnotations() {
-        StringBuilder sb = new StringBuilder("@Id\n");
-        for(Mapping m : getChildren()) {
-            String s = m.getAnnotations();
-            if(! s.isBlank())
-                sb.append(s);
-        }
-        return sb.append(super.getAnnotations()).toString();
+        return "@Set";
+    }
+
+    @Override
+    public String getJavaType() {
+        return "<inferred type>";
     }
     
 }

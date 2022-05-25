@@ -11,11 +11,11 @@ import org.w3c.dom.Element;
  *
  * @author krister
  */
-public class ManyToOne extends Mapping {
+public class ManyToMany extends Mapping {
     
-    public ManyToOne(Element e) {
+    public ManyToMany(Element e) {
         super(e);
-        mapType = Mapping.MANY_TO_ONE_MAPPING;
+        mapType = Mapping.MANY_TO_MANY_MAPPING;
     }
     
     public String getClassName() {
@@ -28,7 +28,7 @@ public class ManyToOne extends Mapping {
 
     @Override
     public String getAnnotations() {
-        StringBuilder sb = new StringBuilder("@ManyToOne\n");
+        StringBuilder sb = new StringBuilder("@ManyToMany\n");
         if(getAttribute("lazy") != null)
             sb.append("@LazyToOne(LazyToOneOption.").append(getAttribute("lazy").toUpperCase()).
                     append(")\n");

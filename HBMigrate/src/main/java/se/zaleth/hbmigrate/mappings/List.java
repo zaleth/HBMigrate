@@ -11,26 +11,24 @@ import org.w3c.dom.Element;
  *
  * @author krister
  */
-public class ForeignKey extends Mapping {
+public class List extends Mapping {
 
     private TableMapping parent;
     
-    public ForeignKey(Element e, TableMapping parent) {
+    public List(Element e, TableMapping parent) {
         super(e);
-        mapType = Mapping.FOREIGN_KEY_MAPPING;
+        this.mapType = Mapping.LIST_MAPPING;
         this.parent = parent;
     }
     
     @Override
     public String getAnnotations() {
-        return "@ForeignKey";
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
     public String getJavaType() {
-        // we will have the same type as the column we reference
-        return "";
-        //return parent.getColumnByTName(getAttribute("column")).getJavaType();
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
 }

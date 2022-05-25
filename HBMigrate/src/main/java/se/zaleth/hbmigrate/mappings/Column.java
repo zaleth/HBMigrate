@@ -13,7 +13,7 @@ import org.w3c.dom.Element;
  *
  * @author krister
  */
-public class Column extends Mapping implements ActionListener {
+public class Column extends Mapping {
     
     private JLabel tableName;
     private JLabel javaName;
@@ -30,6 +30,8 @@ public class Column extends Mapping implements ActionListener {
         javaType = new JTextField();
         panel.add(javaType);
         mapType = Mapping.COLUMN_MAPPING;
+        if(getAttribute("type") != null)
+            Mapping.parseType(this, getAttribute("type"));
     }
     
     public String getAnnotations() {
@@ -62,10 +64,6 @@ public class Column extends Mapping implements ActionListener {
 
     public void setJavaType(String type) {
         this.javaType.setText(type);
-    }
-    
-    public void actionPerformed(ActionEvent e) {
-        
     }
     
 }

@@ -15,12 +15,25 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.xml.sax.SAXException;
+import se.zaleth.hbmigrate.mappings.Mapping;
 
 public class HBMigrate implements ActionListener {
 
+    private class HBMFileFilter implements FilenameFilter {
+        public boolean accept(File dir, String name) {
+            return name.endsWith(".hbm.xml");
+        }
+    }
+    
     private static HBMigrate running = null;
+    private static PrintWriter logFile = null;
     
   public static void main(String[] args) {
+      try {
+          logFile = new PrintWriter(new FileOutputStream("runlog.txt"));
+      } catch(IOException e) {
+          log(e.getMessage());
+      }
     running = new HBMigrate();
   }
 
@@ -36,9 +49,14 @@ public class HBMigrate implements ActionListener {
           running.textOut.append(msg);
           running.textOut.append("\n");
       }
+      if(logFile != null) {
+          logFile.println(msg);
+      }
   }
   
+  private HBMFileFilter hbmFilter;
   private JFrame root;
+  private CustomDialog dialog;
   private JFileChooser loadDialog, saveDialog;
   private JLabel fileName, dirName, className;
   private JScrollPane scrollArea, logArea;
@@ -52,6 +70,7 @@ public class HBMigrate implements ActionListener {
   
   public HBMigrate() {
       settings = new Settings();
+      hbmFilter = new HBMFileFilter();
       
     root = new JFrame("HBMigrate");
     root.setLocation(Integer.parseInt(settings.get("window.left", "100")),
@@ -64,6 +83,7 @@ public class HBMigrate implements ActionListener {
         @Override
         public void windowClosing(WindowEvent e) {
             settings.save();
+            logFile.flush();
         }
     });
     root.addComponentListener(new ComponentAdapter() {
@@ -80,6 +100,8 @@ public class HBMigrate implements ActionListener {
     srcDir = new File(settings.get("sourceDir", ""));
     destDir = new File(settings.get("destinationDir", ""));
     parser = new Parser();
+    
+    dialog = new CustomDialog(root);
     
     loadDialog = new JFileChooser();
     loadDialog.setFileFilter(new FileNameExtensionFilter("XML files", "xml"));
@@ -106,16 +128,25 @@ public class HBMigrate implements ActionListener {
     b = new JButton("Set target dir");
     b.addActionListener(this);
     ip.add(b, BorderLayout.WEST);
-    ip.add(dirName = new JLabel("No directory selected"), BorderLayout.CENTER);
+    ip.add(dirName = new JLabel(settings.get("destinationDir", "No target directory selected")), BorderLayout.CENTER);
+    b = new JButton("Batch convert");
+    b.setActionCommand("Batch");
+    b.addActionListener(this);
+    ip.add(b, BorderLayout.EAST);
     p.add(ip);
     
     ip = new JPanel(new BorderLayout());
+    ip.add(new JLabel("Package: "), BorderLayout.WEST);
     ip.add(pack = new JTextField("Enter package name"), BorderLayout.CENTER);
+    b = new JButton("Convert file");
+    b.setActionCommand("Convert");
+    b.addActionListener(this);
+    ip.add(b, BorderLayout.EAST);
     p.add(ip);
     
     ip = new JPanel(new BorderLayout());
-    ip.add(new JLabel("Class name: "), BorderLayout.WEST);
-    ip.add(className = new JLabel(""), BorderLayout.CENTER);
+    ip.add(new JLabel(settings.get("sourceDir", "No source directory selected")), BorderLayout.WEST);
+    ip.add(className = new JLabel("No class"), BorderLayout.CENTER);
     b = new JButton("Modify source");
     b.setActionCommand("Modify");
     b.addActionListener(this);
@@ -124,7 +155,8 @@ public class HBMigrate implements ActionListener {
     
     root.add(p, BorderLayout.NORTH);
     
-    columns = new JPanel(new GridLayout(0, 1));
+    columns = new JPanel();
+    columns.setLayout(new BoxLayout(columns, BoxLayout.PAGE_AXIS));
     scrollArea = new JScrollPane(columns);
     root.add(scrollArea, BorderLayout.CENTER);
     
@@ -136,6 +168,33 @@ public class HBMigrate implements ActionListener {
     root.setVisible(true);
   }
 
+  public void batchConvert() {
+      File[] files = srcDir.listFiles(hbmFilter);
+      for(File file : files) {
+          convertFile(file);
+      }
+      log("All files converted!");
+  }
+  
+  public void convertFile(File src) {
+    try {
+        log("Source file: " + src.getAbsolutePath());
+        parser.loadFile(src);
+        //parser.traverse();
+        TableMapping map = parser.parse();
+        File targetDir = new File(destDir, map.getPackName().replace(".", File.separator));
+        File target = new File(targetDir, map.getClassName() + ".java");
+        log("Target file: " + target.getAbsolutePath());
+    } catch(IOException ex) {
+        // most likely transient error
+        ex.printStackTrace();
+    } catch(SAXException ex) {
+        // malformed document
+        ex.printStackTrace();
+    }
+
+  }
+  
   public void actionPerformed(ActionEvent e) {
       String cmd = e.getActionCommand();
       
@@ -150,13 +209,13 @@ public class HBMigrate implements ActionListener {
                   parser.loadFile(loadDialog.getSelectedFile());
                   TableMapping map = parser.parse();
                   pack.setText(map.getPackName());
-                  /*className.setText(map.getClassName());
+                  className.setText(File.separator + map.getClassName() + ".java");
+                  scrollArea.invalidate();
                   columns.removeAll();
-                  columns.add(map.getId().getPanel());
-                  for(Column c : map.getColumns()) {
-                      columns.add(c.getPanel());
+                  for(Mapping m : map.getMappings()) {
+                      columns.add(m.getDisplayElement());
                   }
-                  scrollArea.repaint();*/
+                  scrollArea.revalidate();
               } catch(IOException ex) {
                   // most likely transient error
                   ex.printStackTrace();
@@ -171,7 +230,7 @@ public class HBMigrate implements ActionListener {
           saveDialog.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
           saveDialog.setDialogTitle("Choose directory for generated file");
           if(saveDialog.showOpenDialog(root) == JFileChooser.APPROVE_OPTION) {
-              destDir = saveDialog.getCurrentDirectory();
+              destDir = saveDialog.getSelectedFile();
               settings.put("destinationDir", destDir.getAbsolutePath());
               dirName.setText(saveDialog.getSelectedFile().getAbsolutePath());
           }
@@ -181,6 +240,18 @@ public class HBMigrate implements ActionListener {
       } else if(cmd.equals("Modify")) {
           if(destDir != null)
               parser.modifyFile(new File(dirName.getText()), pack.getText());
+      } else if(cmd.equals("Convert")) {
+          if(loadDialog.getSelectedFile() != null)
+              convertFile(loadDialog.getSelectedFile());
+          else
+              dialog.displayDialog("Error", "No source file has been selected", "OK");
+      } else if(cmd.equals("Batch")) {
+          if(srcDir.listFiles(hbmFilter).length > 0) {
+            batchConvert();              
+          } else {
+              dialog.displayDialog("Error", "Directory '" + srcDir.getAbsolutePath()
+                      + "' does not contain any HBM files", "OK");
+          }
       }
 
   }

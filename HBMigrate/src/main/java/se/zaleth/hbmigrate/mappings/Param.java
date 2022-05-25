@@ -5,32 +5,32 @@
  */
 package se.zaleth.hbmigrate.mappings;
 
-import org.w3c.dom.Element;
+import org.w3c.dom.*;
 
 /**
  *
  * @author krister
  */
-public class ForeignKey extends Mapping {
-
-    private TableMapping parent;
+public class Param extends Mapping {
     
-    public ForeignKey(Element e, TableMapping parent) {
+    public Param(Element e) {
         super(e);
-        mapType = Mapping.FOREIGN_KEY_MAPPING;
-        this.parent = parent;
+        mapType = Mapping.PARAM_MAPPING;
+        /*NodeList list = e.getChildNodes();
+        for(int i = 0; i < list.getLength(); i++) {
+            Node n = list.item(i);
+            System.out.println(n.getNodeName() + "(" + n.getNodeType() + "): " + n.getNodeValue());
+        }*/
     }
-    
+
     @Override
     public String getAnnotations() {
-        return "@ForeignKey";
+        return "";
     }
 
     @Override
     public String getJavaType() {
-        // we will have the same type as the column we reference
         return "";
-        //return parent.getColumnByTName(getAttribute("column")).getJavaType();
     }
     
 }
