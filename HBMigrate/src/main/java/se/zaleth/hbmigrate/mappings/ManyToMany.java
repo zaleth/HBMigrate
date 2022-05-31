@@ -22,10 +22,6 @@ public class ManyToMany extends Mapping {
         return getAttribute("class");
     }
 
-    /*public void setClassName(String className) {
-        setAttribute("class", className);
-    }*/
-
     @Override
     public String getAnnotations() {
         StringBuilder sb = new StringBuilder("@ManyToMany\n");

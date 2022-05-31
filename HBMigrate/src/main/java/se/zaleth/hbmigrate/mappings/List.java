@@ -13,9 +13,9 @@ import org.w3c.dom.Element;
  */
 public class List extends Mapping {
 
-    private TableMapping parent;
+    private Mapping parent;
     
-    public List(Element e, TableMapping parent) {
+    public List(Element e, Mapping parent) {
         super(e);
         this.mapType = Mapping.LIST_MAPPING;
         this.parent = parent;

@@ -14,7 +14,7 @@ import org.w3c.dom.*;
 public class Param extends Mapping {
     
     public Param(Element e) {
-        super(e);
+        super(e, false);
         mapType = Mapping.PARAM_MAPPING;
         /*NodeList list = e.getChildNodes();
         for(int i = 0; i < list.getLength(); i++) {

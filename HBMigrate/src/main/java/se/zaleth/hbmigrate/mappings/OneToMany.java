@@ -14,21 +14,25 @@ import org.w3c.dom.Element;
 public class OneToMany extends Mapping {
 
     public OneToMany(Element e) {
-        super(e);
+        super(e, false);
         mapType = Mapping.ONE_TO_MANY_MAPPING;
+        Mapping.parseType(this, getClassName());
     }
     
     public String getClassName() {
         return getAttribute("class");
     }
 
-    /*public void setClassName(String className) {
-        setAttribute("class", className);
-    }*/
-
     @Override
     public String getAnnotations() {
-        return "@OneToMany";
+        StringBuilder sb = new StringBuilder("@OneToMany");
+        if(getAttribute("lazy") != null)
+            sb.append("@LazyToOne(LazyToOneOption.").append(getAttribute("lazy").toUpperCase()).
+                    append(")\n");
+        if(getAttribute("column") != null)
+            sb.append("@JoinColumn(name=").append(getAttribute("column")).append(")\n");
+                        
+        return sb.toString();
     }
 
     @Override

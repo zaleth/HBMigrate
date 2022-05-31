@@ -17,6 +17,7 @@ import se.zaleth.hbmigrate.HBMigrate;
 public class TableMapping {
     
     private static ArrayList<TableMapping> tables = new ArrayList<>();
+    private static TableMapping current;
     
     public static TableMapping getByClassName(String pack, String name) {
         for(TableMapping tm : tables)
@@ -30,6 +31,12 @@ public class TableMapping {
             if(tm.tableName.equals(name))
                 return tm;
         return null;
+    }
+    
+    public static String getCurrentTableName() {
+        if(current == null)
+            return "";
+        return current.tableName;
     }
     
     private TableMapping parent;
@@ -58,6 +65,7 @@ public class TableMapping {
         subClasses = new ArrayList<>();
         parent = null;
         tables.add(this);
+        current = this;
     }
 
     public TableMapping(Element classElement) {
@@ -126,7 +134,7 @@ public class TableMapping {
                     } else {
                         if(last != null)
                             mappings.add(last);
-                        last = Mapping.parseElement((Element) node, parent);
+                        last = Mapping.parseElement((Element) node, last);
                     }
                     break;
                     

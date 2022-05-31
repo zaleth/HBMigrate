@@ -13,22 +13,39 @@ import org.w3c.dom.Element;
  */
 public class Set extends Mapping {
 
-    private TableMapping parent;
+    private Mapping parent;
     
-    Set(Element e, TableMapping parent) {
-        super(e);
+    Set(Element e, Mapping parent) {
+        super(e, false);
         this.mapType = Mapping.SET_MAPPING;
         this.parent = parent;
+        for(Mapping m : children) {
+            switch(m.mapType) {
+                case MANY_TO_ONE_MAPPING:
+                case MANY_TO_MANY_MAPPING:
+                case ONE_TO_MANY_MAPPING:
+                case ONE_TO_ONE_MAPPING:
+                    // we found our reference
+                    m.setAttribute("name", getAttribute("name"));
+                    String s = m.getJavaType();
+                    Mapping.parseType(this, s);
+                    //setJavaType(s.substring(s.lastIndexOf(".") + 1));
+                    break;
+                    
+                default:
+                    // do nothing
+                    break;
+            }
+        }
     }
     
     @Override
     public String getAnnotations() {
-        return "@Set";
+        StringBuilder sb = new StringBuilder("@Set");
+        for(Mapping m : children) {
+            sb.append(m.getAnnotations());
+        }
+        return sb.toString();
     }
 
-    @Override
-    public String getJavaType() {
-        return "<inferred type>";
-    }
-    
 }

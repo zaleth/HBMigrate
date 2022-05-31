@@ -19,6 +19,11 @@ public class IdColumn extends Column {
     }
     
     @Override
+    public String getJavaType() {
+        return "long";
+    }
+    
+    @Override
     public String getAnnotations() {
         StringBuilder sb = new StringBuilder("@Id\n");
         for(Mapping m : getChildren()) {

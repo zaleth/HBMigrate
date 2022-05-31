@@ -67,6 +67,7 @@ public class HBMigrate implements ActionListener {
   private File srcDir, destDir;
   private Parser parser;
   private Settings settings;
+  private HibernateConf conf;
   
   public HBMigrate() {
       settings = new Settings();
@@ -166,6 +167,16 @@ public class HBMigrate implements ActionListener {
     root.add(logArea, BorderLayout.SOUTH);
     
     root.setVisible(true);
+
+    boolean confDone = false;
+    while(!confDone)
+        try {
+            conf = new HibernateConf(settings);
+            //conf.printDBInfo();
+            confDone = true;
+        } catch(NullPointerException e) {
+            settings.openDBOptionsDialog(root);
+        }
   }
 
   public void batchConvert() {

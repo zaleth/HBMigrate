@@ -69,7 +69,6 @@ class Parser {
     }
     
     public TableMapping parse() {
-        mainMap = new TableMapping();
         Element docRoot = doc.getDocumentElement();
         // only process first <class> element
         Element classElement = (Element) docRoot.getElementsByTagName("class").item(0);
@@ -78,7 +77,7 @@ class Parser {
         return mainMap;
     }
     
-    private TableMapping parseClassElement(Element classElement) {
+    /*private TableMapping parseClassElement(Element classElement) {
         TableMapping map = new TableMapping();
         HBMigrate.log(classElement.getAttribute("name"));
         map.setClassName(classElement.getAttribute("name"));
@@ -89,9 +88,6 @@ class Parser {
         Element idElement = (Element) classElement.getElementsByTagName("id").item(0);
         if(idElement != null) {
             IdColumn id = new IdColumn(idElement);
-            /*id.setTableName(idElement.getAttribute("column"));
-            id.setJavaName(idElement.getAttribute("name"));
-            id.setType("int");*/
             map.setId(id);
         } else {
             HBMigrate.log("WARNING: no 'id' found for '" + map.getClassName());
@@ -137,7 +133,7 @@ class Parser {
             map.addSubClass(tm);
         }
         return map;
-    }
+    }*/
     
     /** 
      * Returns all immediate children matching the given tag.

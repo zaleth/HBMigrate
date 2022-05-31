@@ -11,12 +11,14 @@ import se.zaleth.hbmigrate.HBMigrate;
 import javax.swing.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import se.zaleth.hbmigrate.HibernateConf;
 
 /**
  *
  * @author krister
  */
 public abstract class Mapping implements ActionListener {
+    
     
     public static final int INVALID_MAPPING = 0;
     public static final int COLUMN_MAPPING = 1;
@@ -30,16 +32,22 @@ public abstract class Mapping implements ActionListener {
     public static final int PARAM_MAPPING = 9;
     public static final int COMPOSITE_MAPPING = 10;
     public static final int MANY_TO_MANY_MAPPING = 11;
+    public static final int ONE_TO_ONE_MAPPING = 12;
     
     private int type;
     protected int mapType;
-    private HashMap<String,String> attributes;
-    private ArrayList<Mapping> children;
+    protected String javaType;
+    protected HashMap<String,String> attributes;
+    protected ArrayList<Mapping> children;
     private JPanel displayElement;
     private JButton toggleButton;
     private boolean isExpanded;
     
     public Mapping(Node e) {
+        this(e, true);
+    }
+    
+    public Mapping(Node e, boolean hasJavaType) {
         type = e.getNodeType();
         mapType = INVALID_MAPPING;
         attributes = new HashMap<>();
@@ -51,6 +59,17 @@ public abstract class Mapping implements ActionListener {
             if(m != this)
                 children.add(m);
         }
+        
+        if(hasJavaType) {
+            if(attributes.get("type") != null)
+                parseType(this, attributes.get("type"));
+            else if(attributes.get("sql-type") != null)
+                parseType(this, attributes.get("sql-type"));
+            else
+                parseType(this, HibernateConf.getJavaType(TableMapping.getCurrentTableName(),
+                        attributes.get("column"))); // try to do a DB lookup instead?
+        }
+        
         displayElement = new JPanel();
         displayElement.setLayout(new BoxLayout(displayElement, BoxLayout.PAGE_AXIS));
         toggleButton = null;
@@ -59,7 +78,13 @@ public abstract class Mapping implements ActionListener {
     
     public abstract String getAnnotations();
     
-    public abstract String getJavaType();
+    public String getJavaType() {
+        return javaType;
+    }
+    
+    public void setJavaType(String type) {
+        javaType = type;
+    }
     
     protected ArrayList<Mapping> getChildren() {
         return children;
@@ -139,7 +164,7 @@ public abstract class Mapping implements ActionListener {
         displayElement.revalidate();
     }
     
-    public static Mapping parseElement(Element e, TableMapping parent) {
+    public static Mapping parseElement(Element e, Mapping parent) {
         if(e.getNodeType() == Node.ELEMENT_NODE) {
             String name = e.getTagName();
             if(name.equals("property"))
@@ -179,7 +204,7 @@ public abstract class Mapping implements ActionListener {
     public static Mapping parseNode(Node n, Mapping m) {
         switch(n.getNodeType()) {
             case Node.ELEMENT_NODE:
-                Mapping map = Mapping.parseElement((Element) n, null);
+                Mapping map = Mapping.parseElement((Element) n, m);
                 if(map instanceof InnerMapping) {
                     ((InnerMapping)map).consume(m);
                     return m;
@@ -206,18 +231,20 @@ public abstract class Mapping implements ActionListener {
         }
     }
     
-    public static void parseType(Column c, String type) {
+    public static void parseType(Mapping c, String type) {
         if(type.isEmpty())
             c.setJavaType("int");
-        else if(type.startsWith("nvarchar"))
+        else if(type.toLowerCase().startsWith("nvarchar"))
             c.setJavaType("String");
-        else if(type.startsWith("date"))
+        else if(type.toLowerCase().startsWith("number"))
+            c.setJavaType("double");
+        else if(type.toLowerCase().startsWith("date"))
             c.setJavaType("java.sql.Date");
-        else if(type.startsWith("timestamp"))
+        else if(type.toLowerCase().startsWith("timestamp"))
             c.setJavaType("java.sql.Timestamp");
-        else if(type.startsWith("datetime"))
+        else if(type.toLowerCase().startsWith("datetime"))
             c.setJavaType("java.sql.Time");
-        else if(type.startsWith("blob"))
+        else if(type.toLowerCase().startsWith("blob"))
             c.setJavaType("java.sql.Blob");
         else // default case, assume it is a class name
             c.setJavaType(type);

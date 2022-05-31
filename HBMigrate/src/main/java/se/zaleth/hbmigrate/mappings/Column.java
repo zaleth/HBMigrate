@@ -17,7 +17,6 @@ public class Column extends Mapping {
     
     private JLabel tableName;
     private JLabel javaName;
-    private JTextField javaType;
     private JPanel panel;
 
     public Column(Element e) {
@@ -27,11 +26,7 @@ public class Column extends Mapping {
         panel.add(tableName);
         javaName = new JLabel(super.getJavaName());
         panel.add(javaName);
-        javaType = new JTextField();
-        panel.add(javaType);
         mapType = Mapping.COLUMN_MAPPING;
-        if(getAttribute("type") != null)
-            Mapping.parseType(this, getAttribute("type"));
     }
     
     public String getAnnotations() {
@@ -58,12 +53,4 @@ public class Column extends Mapping {
         this.javaName.setText(javaName);
     }
 
-    public String getJavaType() {
-        return javaType.getText();
-    }
-
-    public void setJavaType(String type) {
-        this.javaType.setText(type);
-    }
-    
 }

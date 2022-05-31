@@ -14,7 +14,7 @@ import org.w3c.dom.Element;
 public class Generator extends Mapping {
     
     public Generator(Element e) {
-        super(e);
+        super(e, false);
         mapType = Mapping.GENERATOR_MAPPING;
     }
 

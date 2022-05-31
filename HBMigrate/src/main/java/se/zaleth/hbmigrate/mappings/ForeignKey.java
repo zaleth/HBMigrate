@@ -13,9 +13,10 @@ import org.w3c.dom.Element;
  */
 public class ForeignKey extends Mapping {
 
-    private TableMapping parent;
+    private Mapping parent;
+    private String refClass;
     
-    public ForeignKey(Element e, TableMapping parent) {
+    public ForeignKey(Element e, Mapping parent) {
         super(e);
         mapType = Mapping.FOREIGN_KEY_MAPPING;
         this.parent = parent;
@@ -23,14 +24,17 @@ public class ForeignKey extends Mapping {
     
     @Override
     public String getAnnotations() {
-        return "@ForeignKey";
+        return "@ForeignKey@JoinColumn(name=\"" + getAttribute("column") + "\")\n";
     }
 
     @Override
+    public String getJavaName() {
+        return "fk" + getJavaType();
+    }
+    
+    @Override
     public String getJavaType() {
-        // we will have the same type as the column we reference
-        return "";
-        //return parent.getColumnByTName(getAttribute("column")).getJavaType();
+        return parent.getJavaType();
     }
     
 }
