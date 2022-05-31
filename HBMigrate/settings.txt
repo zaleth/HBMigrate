@@ -1,7 +1,0 @@
-#settings.txt
-#Fri May 20 16:02:33 CEST 2022
-sourceDir=C\:\\Users\\hp\\Documents
-window.top=23
-window.width=1316
-window.height=697
-window.left=14
