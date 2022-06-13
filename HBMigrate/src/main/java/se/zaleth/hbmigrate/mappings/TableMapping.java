@@ -135,6 +135,8 @@ public class TableMapping {
                         if(last != null)
                             mappings.add(last);
                         last = Mapping.parseElement((Element) node, last);
+                        if(last instanceof IdColumn)
+                            id = (IdColumn) last;
                     }
                     break;
                     

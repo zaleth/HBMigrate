@@ -26,10 +26,10 @@ public class ManyToMany extends Mapping {
     public String getAnnotations() {
         StringBuilder sb = new StringBuilder("@ManyToMany\n");
         if(getAttribute("lazy") != null)
-            sb.append("@LazyToOne(LazyToOneOption.").append(getAttribute("lazy").toUpperCase()).
-                    append(")\n");
+            sb.append("/*@LazyToOne(LazyToOneOption.").append(getAttribute("lazy").toUpperCase()).
+                    append(")*/\n");
         if(getAttribute("column") != null)
-            sb.append("@JoinColumn(name=").append(getAttribute("column")).append(")\n");
+            sb.append("@JoinColumn(name=\"").append(getAttribute("column")).append("\")\n");
                         
         return sb.toString();
     }

@@ -243,7 +243,7 @@ public class HBMigrate implements ActionListener {
           if(saveDialog.showOpenDialog(root) == JFileChooser.APPROVE_OPTION) {
               destDir = saveDialog.getSelectedFile();
               settings.put("destinationDir", destDir.getAbsolutePath());
-              dirName.setText(saveDialog.getSelectedFile().getAbsolutePath());
+              dirName.setText(destDir.getAbsolutePath());
           }
       } else if(cmd.equals("Wrapper")) {
           if(destDir != null)

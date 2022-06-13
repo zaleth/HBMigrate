@@ -34,7 +34,9 @@ public class ForeignKey extends Mapping {
     
     @Override
     public String getJavaType() {
-        return parent.getJavaType();
+        if(parent == null)
+            return "";
+        return parent.getJavaType() == null ? "" : parent.getJavaType();
     }
     
 }

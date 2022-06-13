@@ -23,12 +23,12 @@ public class List extends Mapping {
     
     @Override
     public String getAnnotations() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return "@List";
     }
 
     @Override
     public String getJavaType() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return "List";
     }
     
 }

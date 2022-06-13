@@ -11,26 +11,29 @@ import org.w3c.dom.Element;
  *
  * @author krister
  */
-public class OneToMany extends Mapping {
-
-    public OneToMany(Element e) {
-        super(e, false);
-        mapType = Mapping.ONE_TO_MANY_MAPPING;
-        Mapping.parseType(this, getClassName());
+public class OneToOne extends Mapping {
+    
+    public OneToOne(Element e) {
+        super(e);
+        mapType = Mapping.ONE_TO_ONE_MAPPING;
     }
     
     public String getClassName() {
         return getAttribute("class");
     }
 
+    /*public void setClassName(String className) {
+        setAttribute("class", className);
+    }*/
+
     @Override
     public String getAnnotations() {
-        StringBuilder sb = new StringBuilder("@OneToMany");
+        StringBuilder sb = new StringBuilder("@OneToOne(");
         if(getAttribute("lazy") != null)
-            sb.append("/*@LazyToOne(LazyToOneOption.").append(getAttribute("lazy").toUpperCase()).
-                    append(")*/\n");
+            sb.append("/*fetch=FetchType.").append(getAttribute("lazy").toUpperCase()).append("*/");
+        sb.append(")\n");
         if(getAttribute("column") != null)
-            sb.append("@JoinColumn(name=\"").append(getAttribute("column")).append("\")\n");
+            sb.append("@JoinColumn(name= \"").append(getAttribute("column")).append("\")\n");
                         
         return sb.toString();
     }
@@ -39,6 +42,5 @@ public class OneToMany extends Mapping {
     public String getJavaType() {
         return getClassName();
     }
-    
     
 }

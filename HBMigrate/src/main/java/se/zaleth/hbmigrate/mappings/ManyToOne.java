@@ -28,12 +28,12 @@ public class ManyToOne extends Mapping {
 
     @Override
     public String getAnnotations() {
-        StringBuilder sb = new StringBuilder("@ManyToOne\n");
+        StringBuilder sb = new StringBuilder("@ManyToOne(");
         if(getAttribute("lazy") != null)
-            sb.append("@LazyToOne(LazyToOneOption.").append(getAttribute("lazy").toUpperCase()).
-                    append(")\n");
+            sb.append("/*fetch=FetchType.").append(getAttribute("lazy").toUpperCase()).append("*/");
+        sb.append(")\n");
         if(getAttribute("column") != null)
-            sb.append("@JoinColumn(name=").append(getAttribute("column")).append(")\n");
+            sb.append("@JoinColumn(name= \"").append(getAttribute("column")).append("\")\n");
                         
         return sb.toString();
     }

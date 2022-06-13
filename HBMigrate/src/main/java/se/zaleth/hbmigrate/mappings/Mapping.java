@@ -181,6 +181,8 @@ public abstract class Mapping implements ActionListener {
                 return new OneToMany(e);
             else if(name.equals("many-to-many"))
                 return new ManyToMany(e);
+            else if(name.equals("one-to-one"))
+                return new OneToOne(e);
             else if(name.equals("composite-element"))
                 return new CompositeElement(e);
             else if(name.equals("key"))
@@ -232,7 +234,7 @@ public abstract class Mapping implements ActionListener {
     }
     
     public static void parseType(Mapping c, String type) {
-        if(type.isEmpty())
+        if(type == null || type.isEmpty())
             c.setJavaType("int");
         else if(type.toLowerCase().startsWith("nvarchar"))
             c.setJavaType("String");
